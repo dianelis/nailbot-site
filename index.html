@@ -306,7 +306,7 @@ footer { border-top: 1px solid var(--panel-line); }
 
 <script>
 /* Paste your Formspree (or similar) endpoint here, e.g. "https://formspree.io/f/abcdwxyz" */
-const FORM_ENDPOINT = "https://formsubmit.co/ajax/d.insua@columbia.edu";
+const FORM_ENDPOINT = "https://script.google.com/macros/s/AKfycbyfdwbYHLM8qfSGp3HO0lx72WEPYbyt4m9-qlAHxDPMWfMu85XzRWAF2B2L9A9Csjl-/exec";
 const CONTACT = "d.insua@columbia.edu";
 
 /* waitlist forms */
@@ -325,11 +325,10 @@ document.querySelectorAll("form.waitlist").forEach((form) => {
     try {
       const honey = form.querySelector(".hp");
       if (honey && honey.value) { form.reset(); msg.className = "msg ok"; msg.textContent = "You're on the list. We'll be in touch."; return; }
-      const res = await fetch(FORM_ENDPOINT, { method: "POST", headers: { "Accept": "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({ email, _subject: "New NailBot waitlist signup", _template: "table", _captcha: "false", source: form.id || location.pathname }) });
+      const res = await fetch(FORM_ENDPOINT, { method: "POST", body: JSON.stringify({ email, source: form.id || "", page: location.pathname }) });
       if (!res.ok) throw new Error(res.status);
       const data = await res.json().catch(() => ({}));
-      if (String(data.success) === "false" && !/activat/i.test(data.message || "")) throw new Error(data.message || "rejected");
+      if (!data.ok) throw new Error(data.error || "rejected");
       form.reset(); msg.className = "msg ok"; msg.textContent = "You're on the list. We'll be in touch.";
     } catch (err) {
       msg.textContent = "That didn't go through. Please try again, or email " + CONTACT + ".";
