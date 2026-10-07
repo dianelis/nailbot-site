@@ -81,7 +81,13 @@ h1 .shine {
 form { display: flex; flex-wrap: wrap; gap: .5rem; max-width: 30rem;
   background: var(--panel); border: 1px solid var(--panel-line); border-radius: 999px; padding: 6px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-input[type=email] { flex: 1 1 12rem; min-width: 0; font: inherit; color: var(--fg); background: transparent; border: 0; padding: .7rem 1rem; outline: none; }
+input[type=email] { flex: 1 1 12rem; min-width: 0; font: inherit; color: var(--fg); background: transparent; border: 0; border-radius: 999px; padding: .7rem 1rem; outline: none; -webkit-appearance: none; appearance: none; }
+input[type=email]:-webkit-autofill, input[type=email]:-webkit-autofill:hover, input[type=email]:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--fg); caret-color: var(--fg);
+  -webkit-box-shadow: 0 0 0 1000px #18121b inset; box-shadow: 0 0 0 1000px #18121b inset;
+  transition: background-color 9999s ease-out 0s;
+}
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 input::placeholder { color: #7d717b; }
 .cta {
   font: 700 .95rem var(--body); color: #fff; border: 0; border-radius: 999px; padding: .8rem 1.4rem; cursor: pointer;
@@ -199,9 +205,10 @@ footer { border-top: 1px solid var(--panel-line); }
       <h1 class="rise d1">Nails, done by <span class="shine">robot.</span></h1>
       <p class="lede rise d2">A compact robot that paints salon quality manicures at home. No appointment. No smudges. No waiting.</p>
       <div class="rise d3">
-        <form class="waitlist" novalidate>
+        <form class="waitlist" id="form-hero" novalidate>
           <label class="sr" for="email-hero">Email address</label>
           <input id="email-hero" name="email" type="email" placeholder="you@example.com" autocomplete="email" required>
+          <input class="hp" id="hp-hero" name="_honey" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
           <button class="cta" type="submit">Get early access</button>
         </form>
         <p class="msg" role="status" aria-live="polite"></p>
@@ -279,9 +286,10 @@ footer { border-top: 1px solid var(--panel-line); }
     <p class="eyebrow">Early access</p>
     <h2 class="reveal">Be first in line.</h2>
     <div>
-      <form class="waitlist" novalidate>
+      <form class="waitlist" id="form-bottom" novalidate>
         <label class="sr" for="email-join">Email address</label>
         <input id="email-join" name="email" type="email" placeholder="you@example.com" autocomplete="email" required>
+          <input class="hp" id="hp-join" name="_honey" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
         <button class="cta" type="submit">Join the waitlist</button>
       </form>
       <p class="msg" role="status" aria-live="polite"></p>
@@ -298,7 +306,7 @@ footer { border-top: 1px solid var(--panel-line); }
 
 <script>
 /* Paste your Formspree (or similar) endpoint here, e.g. "https://formspree.io/f/abcdwxyz" */
-const FORM_ENDPOINT = "";
+const FORM_ENDPOINT = "https://formsubmit.co/ajax/d.insua@columbia.edu";
 const CONTACT = "d.insua@columbia.edu";
 
 /* waitlist forms */
@@ -315,8 +323,13 @@ document.querySelectorAll("form.waitlist").forEach((form) => {
     if (!FORM_ENDPOINT) { msg.textContent = "The waitlist opens soon. For now, write to " + CONTACT + "."; return; }
     btn.disabled = true; btn.textContent = "Sending";
     try {
-      const res = await fetch(FORM_ENDPOINT, { method: "POST", headers: { "Accept": "application/json", "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+      const honey = form.querySelector(".hp");
+      if (honey && honey.value) { form.reset(); msg.className = "msg ok"; msg.textContent = "You're on the list. We'll be in touch."; return; }
+      const res = await fetch(FORM_ENDPOINT, { method: "POST", headers: { "Accept": "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({ email, _subject: "New NailBot waitlist signup", _template: "table", _captcha: "false", source: form.id || location.pathname }) });
       if (!res.ok) throw new Error(res.status);
+      const data = await res.json().catch(() => ({}));
+      if (String(data.success) === "false" && !/activat/i.test(data.message || "")) throw new Error(data.message || "rejected");
       form.reset(); msg.className = "msg ok"; msg.textContent = "You're on the list. We'll be in touch.";
     } catch (err) {
       msg.textContent = "That didn't go through. Please try again, or email " + CONTACT + ".";
