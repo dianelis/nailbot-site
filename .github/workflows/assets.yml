@@ -1,0 +1,41 @@
+name: Build site images
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - tools/make_assets.py
+      - .github/workflows/assets.yml
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Get fonts
+        run: |
+          pip install pillow numpy fonttools brotli
+          mkdir -p fonts && cd fonts
+          npm pack @fontsource/syne @fontsource/manrope --silent
+          for f in *.tgz; do mkdir -p "${f%.tgz}" && tar -xzf "$f" -C "${f%.tgz}"; done
+          python - <<'PY'
+          import glob
+          from fontTools.ttLib import TTFont
+          for pat, dst in [("fontsource-syne-*/package/files/syne-latin-800-normal.woff", "Syne-800.ttf"),
+                           ("fontsource-manrope-*/package/files/manrope-latin-600-normal.woff", "Manrope-600.ttf"),
+                           ("fontsource-manrope-*/package/files/manrope-latin-800-normal.woff", "Manrope-800.ttf")]:
+              f = TTFont(glob.glob(pat)[0]); f.flavor = None; f.save(dst)
+          PY
+      - name: Make images
+        run: python tools/make_assets.py
+      - name: Commit images
+        run: |
+          rm -rf fonts
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add favicon.ico favicon-32.png apple-touch-icon.png og-image.jpg
+          git commit -m "Add NB icons and link preview image" || echo "No changes"
+          git push
